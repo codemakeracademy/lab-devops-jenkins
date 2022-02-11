@@ -1,0 +1,54 @@
+---
+- hosts: webservers
+  user: ubuntu
+  become: yes
+
+  tasks:
+
+
+  - name: install microk8s
+    command: snap install microk8s --classic
+
+  - name: enable dns
+    command: microk8s enable dashboard dns registry istio
+
+  #- name: usermod
+  #  command: usermod -a -G microk8s ubuntu
+
+  - name: create .kube
+    file:
+      path: /home/ubuntu/.kube
+      state: directory
+
+  - name: kube config
+    shell: microk8s config > /home/ubuntu/.kube/config
+
+  - name: chown
+    command: chown -f -R ubuntu ~/.kube
+
+  - name: create app dir
+    file:
+      path: /home/ubuntu/weekly-team-report-html
+      state: directory
+
+  - name: Example clone of a single branch
+    ansible.builtin.git:
+      repo: https://github.com/Maxim1802/weekly-team-report-html.git
+      dest: /home/ubuntu/weekly-team-report-html
+      version: develop-team-1
+
+  - name: Install "helm" with option --classic
+    community.general.snap:
+      name: helm
+      classic: yes
+
+  - name: K8s helm
+    kubernetes.core.helm:
+      name: jenkins
+      chart_ref: /home/ubuntu/weekly-team-report-html/helm
+      release_namespace: develop
+      create_namespace: true
+      wait: true
+      replace: true
+      kubeconfig: /home/ubuntu/.kube/config
+
